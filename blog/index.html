@@ -29,6 +29,226 @@
     </div>
 
     <div class="main-container">
+        <h2>Remote caching with sbt and S3 across multiple machines</h2>
+
+        <div class="date-written">2022-7-11</div>
+        <div class="tag">Scala</div>
+        <div class="tag">sbt</div>
+
+        <p>
+            sbt 1.4.x introduced <a href="https://www.scala-sbt.org/1.x/docs/Remote-Caching.html">remote caching</a>, a
+            feature for sharing your build output in order to save time during compilation. You can think of it
+            similarly
+            to how incremental compilation works in that if you change 1 file of a project containing hundreds of files,
+            you'd
+            rather not have to recompile <em>everything</em>. Remote caching takes this one step further. Rather than be
+            limited to your machine, you can do this across multiple machines (or multiple branches on your local
+            machine or what have you).
+        </p>
+
+        <p>
+            sbt's remote caching feature is technically still marked experimental, but we've been using it at work for
+            over a
+            year
+            now and haven't run into issues so far. We originally only set up this feature in CI (in our case Jenkins)
+            but
+            recently I thought to myself, "Wouldn't it be nice to also re-use Jenkins' build output on my local machine
+            too so
+            that I never have to do a full recompile on this project ever again?" Considering the project in question is
+            300,000+ LOC and takes roughly 7 minutes to perform a clean build on my underpowered laptop, I figured this
+            would be a huge win. And spoilers... it was! 😄 Now onto the setup:
+        </p>
+
+        <h2>Choosing the storage method</h2>
+
+        <p>You have many options as to where to store the build cache. sbt can cache via Maven repository, so anywhere
+            you can host a Maven repository is an option. That means a private <a
+                    href="https://help.sonatype.com/repomanager3">Nexus
+                repository</a> would also work. In fact, <a href="https://www.muki.rocks/sbt-remote-cache-recipes/">here's
+                a blog post from Muki Seiler which
+                goes into that</a> (as well as using <a href="https://min.io/">minio</a> as an alternative).</p>
+
+        <p>In our case, we didn't already have a private Nexus repository, nor were we too keen on setting one up as
+            that
+            meant needing another server running 24/7. We decided to try S3 instead, as it would mean less
+            infrastructure to
+            set
+            up as well as being less costly.</p>
+
+        <h2>The setup</h2>
+
+        <p>
+            Luckily there already exists an sbt plugin for resolving and publishing artifacts using S3 called <a
+                href="https://github.com/tpunder/fm-sbt-s3-resolver">fm-sbt-s3-resolver</a>. Simply add the following to
+            your <code>plugins.sbt</code> (or wherever you store it):</p>
+
+        <pre class="codeblock"><code class="block">addSbtPlugin("com.frugalmechanic" % "fm-sbt-s3-resolver" % "0.20.0")</code></pre>
+
+        <p>
+            Then create an S3 bucket where you intend to store the build cache. For example, let's call the bucket
+            <code>sbt_build_cache</code>.
+        </p>
+
+        <p>Once that's done, you can set the <code>pushRemoteCacheTo</code> sbt setting in your build file like so:</p>
+
+        <pre class="codeblock"><code class="block">pushRemoteCacheTo := Some("S3 Remote Cache" at "s3://your-s3-bucket/sbt_build_cache/")</code></pre>
+
+        <p>
+            Note that it's called <code>pushRemoteCacheTo</code> but this works in both directions (push and pull).
+            There is no
+            <code>pullRemoteCacheFrom</code>.
+        </p>
+
+        <h3>Credentials for S3</h3>
+
+        <p>
+            <a href="https://github.com/tpunder/fm-sbt-s3-resolver#s3-credentials">fm-sbt-s3-resolver has a section
+                about
+                credentials</a> but personally I didn't see the need for any of that. The default
+            <code>AWSCredentialsProvider</code>
+            should already do everything you need. For your local machine, just make sure you've already configured your
+            credentials file (the one usually located at <code>~/.aws/credentials</code>). In my case, I already had
+            done this a
+            long
+            time ago which meant I didn't need to do anything else, but if you've never done it before <a
+                href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html">follow the steps
+            described
+            here</a>.</p>
+
+        <p>Similarly, our Jenkins instance was basically already configured as it runs on
+            ec2 and has an AWS role attached to it that can access the S3 bucket. The default <code>AWSCredentialsProvider</code>
+            takes it from there and will perform the auth. If you haven't done this before, <a
+                    href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html">the
+                following article may be helpful</a>.</p>
+
+        <p>And that's it. No need to set up a shared account or commit anything extra to the repository. Each developer
+            should have their own AWS account that can be managed (and revoked) separately that accesses the S3
+            bucket.</p>
+
+        <p>
+            While I've not tried this with GitHub Actions, I imagine the easiest solution would be to use the <a
+                href="https://github.com/aws-actions/configure-aws-credentials"> configure-aws-credentials
+        </a> action and follow the instructions described there.</p>
+
+        <h3>Actual usage</h3>
+
+        <p>
+            In CI, when running your sbt command be sure to include the <code>pullRemoteCache</code> and <code>pushRemoteCache</code>
+            tasks.
+            Something like <code>pullRemoteCache; Test/compile; pushRemoteCache; test</code> or however you'd prefer to
+            order the
+            tasks
+            (such as pushing the remote cache only <em>after</em> your tests have passed).
+        </p>
+
+        <p>
+            As for usage on my local machine, I simply call <code>pullRemoteCache</code> followed by a
+            <code>Test/compile</code> in sbt. What was
+            once 7
+            minutes to compile everything now takes 15 seconds. Almost all that time is spent downloading the artifacts.
+            The compile step itself takes 2 seconds.
+        </p>
+
+        <p>
+            Note the download from S3 only happens once per content hash. The artifacts are stored in your local sbt
+            cache after
+            the first download. So if you do another <code>clean</code> followed by a <code>pullRemoteCache</code>,
+            it'll be much
+            faster the second time.
+        </p>
+
+        <h2>The tricky parts</h2>
+
+        <p>
+            Everything up to this point went smoothly for me. As I mentioned earlier, we've been using sbt remote
+            caching
+            for over a year now in CI. The difference this time is that our local machines use a different environment
+            from
+            Jenkins. So when I pulled the remote cache from S3 (that Jenkins had uploaded) onto my Windows dev machine, I
+            ran into
+            unforeseen
+            issues. While the <code>pullRemoteCache</code> task worked fine, whenever I went to compile anything it
+            would do a full
+            recompile each time.
+        </p>
+
+        <p>
+            What I later realized is that all the cache files were getting invalidated by sbt/Zinc during the
+            incremental compilation step. The
+            reason was that what was being passed into <code>scalacOptions</code> differed slightly between my machine
+            and Jenkins.
+            For
+            example, if my machine uses a <code>-Ybackend-parallelism</code> value of 16 while Jenkins uses 4, then Zinc
+            will
+            invalidate all the files and recompile everything.</p>
+
+        <p>An even worse example is that on Windows the plugin paths are
+            sent
+            as <code>-Xplugin:target\compiler_plugins\wartremover_2.13.8-3.0.5.jar</code> and not
+            <code>-Xplugin:target/compiler_plugins/wartremover_2.13.8-3.0.5.jar</code>. The backslash difference is
+            enough to cause
+            everything to get invalidated.
+        </p>
+
+        <p>
+            As a workaround I did the following:
+        </p>
+
+        <pre class="codeblock"><code class="block">incOptions := incOptions.value
+  .withIgnoredScalacOptions(
+    incOptions.value.ignoredScalacOptions ++ Array(
+      "-Xplugin:.*",
+      "-Ybackend-parallelism [\\d]+"
+    )
+  )</code></pre>
+
+        <p>
+            Luckily this fixed it and everything works fine now.
+        </p>
+
+        <p>
+            It took me a while to find but if you're struggling with similar issues, use the following options to
+            enable the logs for debugging purposes:
+        </p>
+
+
+        <pre class="codeblock"><code class="block">logLevel := Level.Debug
+incOptions := incOptions.value.withApiDebug(true)
+</code></pre>
+
+        <p>
+            You'll be able to see what is causing invalidation to happen. Beware though, the logs are noisy. You may
+            want to pipe it to a file.
+        </p>
+
+        <h2>Additional thoughts</h2>
+
+        <p>
+            Consider adding an expiration policy to your S3 bucket so that these cache files don't accumulate forever.
+            We
+            arbitrarily went with a 2 week lifetime, but use whatever value you think makes sense.
+        </p>
+
+        <p>
+            As for sbt's incremental compilation options, I feel like it should be more aware of which scalac options
+            are "safe" (i.e. don't ruin repeatable builds) and which are unsafe. Right now it seems way too aggressive to me as <em>any</em>
+            difference will
+            cause an invalidation. At the very least it should normalize paths. But perhaps this was never a concern
+            before
+            the remote caching feature was introduced. Maybe it's something that makes sense to address now.
+        </p>
+
+        <h2>Conclusion</h2>
+
+        <p>
+            And that's it! I hope that was helpful and you're able to get remote caching working. It's definitely worth
+            it
+            for large projects. Surprisingly I rarely see this feature mentioned, and that's a shame because it's been
+            tremendously helpful for cutting down our CI times. And now with local compilation too!
+        </p>
+
+        <hr/>
+
         <h2>Getting to the bottom of Pikachu's boobs</h2>
 
         <div class="date-written">2022-4-29</div>

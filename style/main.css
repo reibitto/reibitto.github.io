@@ -184,6 +184,53 @@ h2 a {
     text-decoration: none;
 }
 
+h3 {
+    font-size: 1.5em;
+    display: table;
+    padding: 0 0.8em 0.5em 0.8em;
+    margin-bottom: 0.5em;
+    background: url("../image/stroke1.png") no-repeat bottom left;
+    background-size: 100% 0.4em;
+}
+
+h3 a {
+    text-decoration: none;
+}
+
+code {
+    font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+    font-size: 0.9rem;
+    background: #d7c3a5;
+    color: #000;
+    padding: 0.2rem 0.3rem;
+    border-radius: 0.3rem;
+}
+
+code.inline {
+    background: #0F111A;
+    color: #C3CEE3;
+}
+
+code.block {
+    background: #0F111A;
+    color: #C3CEE3;
+    white-space: pre-wrap;
+    line-height: 1.5em;
+}
+
+.codeblock {
+    display: block;
+    background: #0F111A;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+div.code {
+    background: #0F111A;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
 .tag {
     display: inline-block;
     font-size: 0.8em;
@@ -237,4 +284,12 @@ table {
 table tr td {
     border: 1px solid #000;
     padding: 0.25rem 0.4rem;
+}
+
+hr {
+    height: 0.2rem;
+    border: 0;
+    color: #d7c3a5;
+    background: #d7c3a5;
+    margin: 4rem 0;
 }

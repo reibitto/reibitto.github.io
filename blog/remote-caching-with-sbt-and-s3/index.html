@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>reibitto's blog</title>
+    <title>reibitto's blog - Remote caching with sbt and S3 across multiple machines</title>
     <link rel="stylesheet" media="screen" href="/style/normalize.css">
     <link rel="stylesheet" media="screen" href="/style/main.css">
     <link rel="stylesheet" media="screen" href="/style/main-media.css">
@@ -246,117 +246,6 @@ incOptions := incOptions.value.withApiDebug(true)
             for large projects. Surprisingly I rarely see this feature mentioned, and that's a shame because it's been
             tremendously helpful for cutting down our CI times. And now with local compilation too!
         </p>
-
-        <hr/>
-
-        <h2>Getting to the bottom of Pikachu's boobs</h2>
-
-        <div class="date-written">2022-4-29</div>
-        <div class="tag">Translation</div>
-        <div class="tag">Games</div>
-        <div class="tag">Pokemon</div>
-
-        <p>
-            Many Pokemon fans may already be familiar with the often cited story that when Pokemon was first pitched to
-            be localized in the US, the American staff proposed replacement designs for Pikachu because they thought
-            Pikachu was "too cute" for the American market. Supposedly they suggested turning Pikachu into "a tiger with
-            huge breasts" as they thought this would appeal more to American kids.
-        </p>
-
-        <p>
-            Upon reading this for the first time, I thought to myself, "There's absolutely no way this could be true".
-            However, when I followed the source (from this <a href="https://youtu.be/yheM8RqvqFQ">Did You Know
-            Gaming?</a> YouTube
-            video), to my surprise it was Tsunekazu Ishihara, president of The Pokemon Company, who said this. And I did
-            confirm that the <a href="https://www.nintendo.co.jp/nom/0007/taidan1/page03.html">original Japanese
-            interview</a> was <em>not</em> mistranslated (other than potentially translating an implicit "we" as "I").
-        </p>
-
-        <blockquote>
-            <p>The first time we showed off some Pokémon in the US, we were told they were 'too cute'. The staff in
-                America submitted their ideas for replacement designs, but we just couldn't believe the kind of stuff
-                they were proposing.</p>
-
-            <p>"They turned Pikachu into something like a tiger with huge breasts. It looked like a character from the
-                musical Cats. When I asked 'how is this supposed to be Pikachu??' they said, 'Well look, there's its
-                tail right there'... Seriously, that was the kind of stuff being proposed.</p>
-
-            <p class="source"><a href="https://youtu.be/yheM8RqvqFQ">Source (2020/7/9): Did You Know Gaming?</a></p>
-        </blockquote>
-
-        <p>"How could this be!?", I thought to myself. The story makes no sense, yet here it is straight from the
-            president's mouth.</p>
-
-        <p>I did some more digging as I wasn't ready to accept this. I found 2 old interviews from Satoru Iwata, from
-            2008 and 2009 respectively where he clearly states that the Pikachu redesign they received was a large
-            <em>muscular</em> Pikachu, not "a tiger with huge breasts" like the musical <em>Cats</em>.</p>
-
-        <blockquote>
-            <p>They saw Pocket Monsters and said, "Creatures this cute can't be called 'monsters'. A monster needs to
-                muscular and more fearsome." When I received their muscular Pikachu redesign I thought to myself,
-                "There's no way we can show this to the people who created Pokemon". I remember this like it was
-                yesterday, even though about 10 years have passed since then.</p>
-
-            <p class="source"><a href="https://www.nintendo.co.jp/ir/events/081031qa/03.html">Source (2008/10/31):
-                Nintendo
-                Official Website</a></p>
-        </blockquote>
-
-        <blockquote>
-            <p>When we were looking to expand Pokemon overseas, I can't forget what we were told. They said, "Something
-                this
-                cute can't be called a 'monster'". They said if you want success in the American market you need to go
-                with a muscular redesign, such as the one they sent us.</p>
-
-            <p>The president of Nintendo at the time, Hiroshi Yamauchi, told me, "If there is no example [of a cute
-                design like this] working in America, that's even more reason to give it a try. When it comes to
-                entertainment, there is value to standing out from the rest. If something is unique and sees success, it
-                has the potential to become really big. Go with the Japanese designs as is."</p>
-
-            <p class="source"><a href="https://toyokeizai.net/articles/-/10311?page=2">Source (2009/5/18): Toyokeizai
-                Online</a></p>
-        </blockquote>
-
-        <p>
-            So what's going on? How are two official sources published by Nintendo on their own website disagreeing with
-            one another?
-        </p>
-
-        <p>
-            The answer likely lies in the Japanese word 胸, which can mean both chest or breasts/boobs. What appears to
-            have happened is that the phrase "big chest" got misinterpreted on the Japanese side first. Iwata meant "big
-            chest" as in large pectoral muscles, but somewhere down the line in retelling the story this turned into
-            "huge boobs", like a bad game of telephone.
-        </p>
-
-        <p>
-            I'm inclined to believe Satoru Iwata's telling of the story as he appears to be the primary source. And the
-            fact that he specifically says "even today I remember their words vividly" and "How am I supposed to show
-            these redesigns to the people who created Pokemon?". So it stands to reason a lot of the creators of Pokemon
-            didn't actually see the proposed redesigns and all their information is second-hand, hence why the details
-            are different. In the following <a href="https://iwataasks.nintendo.com/interviews/#/ds/pokemon/0/2">Iwata
-            Asks</a>, it
-            is stated that Game Freak was busy with the development of Pokemon Gold and Silver, and that Nintendo along
-            with Iwata (who didn't work for Nintendo at the time but was the go-between for the two) were the ones doing
-            the work to bring Pokemon overseas.
-        </p>
-
-        <p>
-            Between Iwata's words and the fact that it's not believable at all that Americans (who have always been
-            sensitive about sexual imagery, especially in the 90s) would suggest such a change for a kid's show. When
-            you consider cartoons airing at the time like <em>Teenage Mutant Ninja Turtles</em> and <em>Street
-            Sharks</em>, it's not
-            difficult to imagine exactly what they were proposing for Pikachu's redesign.
-        </p>
-
-        <div class="image-container">
-            <div class="caption-group">
-                <img src="/image/blog/street-sharks.jpg" alt="JAWSOME!" class="img-fluid"/>
-                <span class="image-caption">JAWSOME!</span>
-            </div>
-        </div>
-
-        <p>To think what could have been.</p>
     </div>
 
 
